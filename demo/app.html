@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>me101me</title>
+<link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
+</head>
+<body>
+<div id="info">
+  <span>Top</span>
+  <input id="top" type="text" size="50"><br>
+  <span>Top Font</span>
+  <input id="topFillColor" type="color" value="#ff0000">
+  <input id="topStrokeColor" type="color" value="#ffffff">
+  <input id="topStrokeSize" type="number" value="2" min="0" max="100">
+  <div id="topAlign" class="alignBar">
+    <input type="hidden" class="alignValue">
+    <a data-value="left" class="alignButtonReleased" href="#"><img src="img/ic_format_align_left_black_24dp_1x.png" alt="Align Left"></a>
+    <a data-value="center" class="alignButtonReleased" href="#"><img src="img/ic_format_align_center_black_24dp_1x.png" alt="Align Center"></a>
+    <a data-value="right" class="alignButtonReleased" href="#"><img src="img/ic_format_align_right_black_24dp_1x.png" alt="Align right"></a>
+    &nbsp;
+  </div>
+  <input id="topFontSize" type="number" value="60" min="1" max="1000">
+  <input id="topFontName" type="text" size="40" value="Impact, Droid Sans Fallback"><br>
+
+  <span>Bottom</span>
+  <input id="bottom" type="text" size="80"><br>
+  <span>Bottom Font</span>
+  <input id="bottomFillColor" type="color" value="#ff0000">
+  <input id="bottomStrokeColor" type="color" value="#ffffff">
+  <input id="bottomStrokeSize" type="number" value="2" min="0" max="100">
+  <div id="bottomAlign" class="alignBar">
+    <input type="hidden" class="alignValue">
+    <a data-value="left" class="alignButtonReleased" href="#"><img src="img/ic_format_align_left_black_24dp_1x.png" alt="Align Left"></a>
+    <a data-value="center" class="alignButtonReleased" href="#"><img src="img/ic_format_align_center_black_24dp_1x.png" alt="Align Center"></a>
+    <a data-value="right" class="alignButtonReleased" href="#"><img src="img/ic_format_align_right_black_24dp_1x.png" alt="Align right"></a>
+    &nbsp;
+  </div>
+  <input id="bottomFontSize" type="number" value="40" min="1" max="1000">
+  <input id="bottomFontName" type="text" size="40" value="Impact, Droid Sans Fallback"><br>
+</div>
+
+<div id="buttonBar">
+  <button id="capture" disabled>Capture</button>
+  <button id="update" disabled>Update</button>
+  <button id="reset">Reset</button>
+  <button id="download">Download</button>
+</div>
+<div id="settingBar">
+  <span>Auto Capture</span> <input id="autoCaptureTimeout" type="number" value="0" min="0" max="100">
+  <span>Auto Close</span> <input id="autoCloseTimeout" type="number" value="0" min="0" max="100">
+</div>
+<br>
+
+<span id="hint">You may capture from camera, or drop an image here</span><br>
+<canvas id="backCanvas" style="display: none; "></canvas>
+<canvas id="canvas" style="display: none; border: 1px solid black"></canvas>
+<img id="resultImage" alt="Result" style="display: none; border: 1px solid black">
+<video id="video" style="display: none;" autoplay></video>
+<div id="videoError" style="display: none; background-color: red">Camera Error!</div>
+
+<script type="text/javascript">
+var video = document.getElementById('video');
+var backCanvas = document.getElementById('backCanvas');
+var canvas = document.getElementById('canvas');
+var resultImage = document.getElementById('resultImage');
+var hint = document.getElementById('hint');
+var capture = document.getElementById('capture');
+var update = document.getElementById('update');
+var reset = document.getElementById('reset');
+
+function onDrop(image) {
+  image.width = video.videoWidth > 0 ? video.videoWidth : 640;
+  image.height = video.videoHeight > 0 ? video.videoHeight : 480;
+  prepareBackImage(image, image.width, image.height);
+  genImage();
+  afterCapture();
+}
+
+function afterCapture() {
+  capture.disabled = true;
+  update.disabled = false;
+  video.style.display = 'none';
+  var type = 'image/png';
+  //if (myApp.out) {
+    canvas.style.display = '';
+    if (myApp.out.endsWith('.jpg'))
+      type = 'image/jpeg';
+    else if (myApp.out.endsWith('.webp'))
+      type = 'image/webp';
+  //} else
+  // resultImage.style.display = '';
+  var url = canvas.toDataURL(type);
+  if (myApp.out) {
+    var head = 'data:' + type + ';base64,';
+    myApp.writeImage(url.substr(head.length));
+  //} else {
+  //  resultImage.src = url;
+  }
+  saveConfig();
+  if (window.stream && window.stream.getVideoTracks())
+    window.stream.getVideoTracks().forEach(function(track) { track.stop(); });
+}
+
+function registerDrop(element, callback) {
+  element.ondragover = function () { return false; };
+  element.ondragend = function () { return false; };
+  element.ondrop = function(e) {
+    e.preventDefault();
+    var files = e.dataTransfer.files;
+    if (files.length < 1) return;
+    var reader = new FileReader();
+    reader.onload = function (event) {
+      var image = new Image();
+      image.src = event.target.result;
+      callback(image);
+    };
+    reader.readAsDataURL(files[0]);
+  };
+}
+
+function prepareBackImage(img, width, height) {
+  backCanvas.width = width;
+  backCanvas.height = height;
+  var context = backCanvas.getContext('2d');
+  context.drawImage(img, 0, 0, width, height);
+}
+
+function genImage() {
+  canvas.width = backCanvas.width;
+  canvas.height = backCanvas.height;
+  var context = canvas.getContext('2d');
+  context.drawImage(backCanvas, 0, 0, backCanvas.width, backCanvas.height);
+  
+  var padding = 10;
+  context.fillStyle = getInputValue('topFillColor');
+  context.strokeStyle = getInputValue('topStrokeColor');
+  context.lineWidth = getInputValue('topStrokeSize');
+  var topFontSize = parseFloat(getInputValue('topFontSize'));
+  context.font = topFontSize + 'px ' + getInputValue('topFontName');
+  var alignValue = getAlignValue('topAlign');  
+  var parts = splitText(context, getInputValue('top'), canvas.width - padding * 2);
+  for (i = 0; i < parts.length; i++) {
+    var str = parts[i];
+    var x = padding;
+    if (alignValue == 'right')
+      x = canvas.width - padding - context.measureText(str).width;
+    else if (alignValue == 'center')
+      x = (canvas.width - context.measureText(str).width) / 2;
+    var y = padding + (i + 1) * topFontSize;
+    context.fillText(str, x, y);
+    context.strokeText(str, x, y);
+  }
+
+  context.fillStyle = getInputValue('bottomFillColor');
+  context.strokeStyle = getInputValue('bottomStrokeColor');
+  context.lineWidth = getInputValue('bottomStrokeSize');
+  var bottomFontSize = parseFloat(getInputValue('bottomFontSize'));
+  context.font = bottomFontSize + 'px ' + getInputValue('bottomFontName');
+  var alignValue = getAlignValue('bottomAlign');
+  var parts = splitText(context, getInputValue('bottom'), canvas.width - padding * 2);
+  for (i = 0; i < parts.length; i++) {
+    var str = parts[i];
+    var x = padding;
+    if (alignValue == 'right')
+      x = canvas.width - padding - context.measureText(str).width;
+    else if (alignValue == 'center')
+      x = (canvas.width - context.measureText(str).width) / 2;
+    var y = canvas.height - padding - (parts.length - i - 1) * bottomFontSize;
+    context.fillText(str, x, y);
+    context.strokeText(str, x, y);
+  }
+}
+
+function splitText(context, text, width) {
+  var parts = [];
+  var start = 0;
+  var end = 0;
+  var i;
+  for (i = 0; i < text.length; i++) {
+    if (text[i] == ' ') {
+      var part = text.substr(start, i - start);
+      if (context.measureText(part).width > width) {
+        parts.push(text.substr(start, end - start));
+        start = end;
+      }
+      end = i + 1;
+    }
+  }
+  {
+    var part = text.substr(start, i - start);
+    if (context.measureText(part).width > width) {
+      parts.push(text.substr(start, end - start));
+      start = end;
+    }
+  }
+  if (i > start)
+    parts.push(text.substr(start, i - start));
+  return parts;
+}
+
+function openCamera() {
+  video.style.display = 'none';
+  canvas.style.display = 'none';
+  resultImage.style.display = 'none';
+  lastImage = null;
+
+  var successFunc = function () {
+    video.style.display = '';
+    capture.disabled = false;    
+    var autoCaptureTimeout = 1000 * parseInt(getInputValue('autoCaptureTimeout'));
+    if (autoCaptureTimeout > 0)
+      setTimeout(function() { if (!capture.disabled) capture.click(); }, autoCaptureTimeout);
+  };
+  var failFunc = function() {
+    document.getElementById('videoError').style.display = '';
+  };
+  var mediaOpt = { audio: false, video: { width: { min: 800, ideal: 1280, max: 1920 }, height: { min: 600, ideal: 720, max: 1080 } } };
+  if (navigator.webkitGetUserMedia) {
+    navigator.webkitGetUserMedia(mediaOpt, function(stream) {
+        window.stream = stream;
+        video.src = URL.createObjectURL(stream);
+        successFunc();
+      }, failFunc);
+  } else if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    navigator.mediaDevices.getUserMedia(mediaOpt)
+      .then(function(stream) {
+        window.stream = stream;
+        video.srcObject = stream;
+        successFunc();
+      })
+      .catch (failFunc);
+  } else {
+    failFunc();
+  }
+}
+
+function saveConfig() {
+  myApp.config.topFillColor = getInputValue('topFillColor');
+  myApp.config.topStrokeColor = getInputValue('topStrokeColor');
+  myApp.config.topStrokeSize = getInputValue('topStrokeSize');
+  myApp.config.topAlign = getAlignValue('topAlign');
+  myApp.config.topFontSize = getInputValue('topFontSize');
+  myApp.config.topFontName = getInputValue('topFontName');
+  myApp.config.bottomFillColor = getInputValue('bottomFillColor');
+  myApp.config.bottomStrokeColor = getInputValue('bottomStrokeColor');
+  myApp.config.bottomStrokeSize = getInputValue('bottomStrokeSize');
+  myApp.config.bottomFontSize = getInputValue('bottomFontSize');
+  myApp.config.bottomFontName = getInputValue('bottomFontName');
+  myApp.config.autoCaptureTimeout = getInputValue('autoCaptureTimeout');
+  myApp.config.autoCloseTimeout = getInputValue('autoCloseTimeout');
+  myApp.writeConfigFile();
+}
+
+function loadConfig() {
+  myApp.readConfigFile();
+  setInputValue('topFillColor', myApp.config.topFillColor, '#000000');
+  setInputValue('topStrokeColor', myApp.config.topStrokeColor, '#ffffff');
+  setInputValue('topStrokeSize', myApp.config.topStrokeSize, '2');
+  updateAlignBar('topAlign', myApp.config.topAlign);
+  setInputValue('topFontSize', myApp.config.topFontSize, '60');
+  setInputValue('topFontName', myApp.config.topFontName, 'Impact, Droid Sans Fallback');
+  setInputValue('bottomFillColor', myApp.config.bottomFillColor, '#000000');
+  setInputValue('bottomStrokeColor', myApp.config.bottomStrokeColor, '#ffffff');
+  setInputValue('bottomStrokeSize', myApp.config.bottomStrokeSize, '2');
+  setInputValue('bottomFontSize', myApp.config.bottomFontSize, '40');
+  setInputValue('bottomFontName', myApp.config.bottomFontName, 'Impact, Droid Sans Fallback');
+  setInputValue('autoCaptureTimeout', myApp.config.autoCaptureTimeout, '0');
+  setInputValue('autoCloseTimeout', myApp.config.autoCloseTimeout, '0');
+}
+
+registerDrop(hint, onDrop);
+registerDrop(canvas, onDrop);
+registerDrop(video, onDrop);
+
+capture.focus();
+capture.onclick = function () {  
+  prepareBackImage(video, video.videoWidth, video.videoHeight);
+  genImage();
+  afterCapture();
+  var autoCloseTimeout = 1000 * parseInt(getInputValue('autoCloseTimeout'));
+  if (autoCloseTimeout > 0)
+    setTimeout(function() { window.close(); }, autoCloseTimeout);
+};
+
+update.onclick = function () {
+  genImage();
+  afterCapture();
+};;
+
+reset.onclick = openCamera;
+
+download.onclick = function () {
+  var type = 'image/png';
+  if (myApp.out) {
+    if (myApp.out.endsWith('.jpg'))
+      type = 'image/jpeg';
+    else if (myApp.out.endsWith('.webp'))
+      type = 'image/webp';
+  }
+  var dt = canvas.toDataURL(type);
+  dt = dt.replace(/^data:image\/[^;]*/, 'data:application/octet-stream');
+  var link = document.createElement('a');
+  link.style.display = 'none';
+  document.body.appendChild(link);
+  link.href = dt;
+  link.download = "meme.png";
+  link.click();
+}
+
+var alignBars = document.querySelectorAll('.alignBar');
+for (var i = 0; i < alignBars.length; i++) {
+  var buttons = alignBars[i].querySelectorAll('a');
+  for (var j = 0; j < buttons.length; j++) {
+    buttons[j].onclick = function () {
+      var buttons2 = this.parentNode.querySelectorAll('a');
+      for (var k = 0; k < buttons2.length; k++)
+        buttons2[k].className = 'alignButtonReleased';
+      this.className = 'alignButtonPressed';
+    };
+  }
+}
+
+function updateAlignBar(barid, value) {
+  var buttons = document.getElementById(barid).querySelectorAll('a');
+  for (var k = 0; k < buttons.length; k++)
+    buttons[k].className = 'alignButtonReleased';
+  var button = document.getElementById(barid).querySelector("a[data-value='" + value + "']");
+  if (button)
+    button.className = 'alignButtonPressed';
+}
+
+function getAlignValue(barid) {
+  var button = document.getElementById(barid).querySelector('.alignButtonPressed');
+  return button ? button.attributes['data-value'].value : null;
+}
+
+document.body.onload = function () {
+  loadConfig();
+  setInputValue('top', myApp.top);
+  setInputValue('bottom', myApp.bottom);
+  openCamera();
+};
+
+</script>
+</body>
+</html>

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="favicon.ico">
+
+    <title>me101me - meme generator</title>
+
+    <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-fork-ribbon-css/0.2.0/gh-fork-ribbon.min.css" /> -->
+    <link rel="stylesheet" href="gh-fork-ribbon.css" />
+
+    <!-- Bootstrap core CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+
+    <!-- Custom styles for this template -->
+    <link href="jumbotron-narrow.css" rel="stylesheet">
+  </head>
+
+  <body>
+    <a class="github-fork-ribbon" href="https://github.com/me101me/me101me" title="Fork me on GitHub">Fork me on GitHub</a>
+
+    <div class="container">
+      <div class="header clearfix">
+        <!--
+        <nav>
+          <ul class="nav nav-pills pull-right">
+            <li role="presentation" class="active"><a href="#">Home</a></li>
+            <li role="presentation"><a href="#">About</a></li>
+            <li role="presentation"><a href="#">Contact</a></li>
+          </ul>
+        </nav>
+        -->
+        <h3 class="text-muted">me101me</h3>
+      </div>
+
+      <div class="jumbotron">
+        <h1><img src="icon.png" alt="me101me" style="width: 12%; height: 12%; margin-right: 5%;">me101me</h1>
+        <p class="lead">A cross-platform meme generator</p>
+        <p>
+          <a class="btn btn-lg btn-success btn-desktop-version" href="https://github.com/me101me/me101me/releases" role="button">Desktop Version</a>
+          <a class="btn btn-lg btn-success" href="https://me101me.github.io/demo/app.html" role="button">Web Version</a>
+        </p>
+      </div>
+
+      <div class="row marketing">
+        <div class="col-lg-6">
+          <h4>Fun</h4>
+          <p>Create meme images for fun!</p>
+
+          <h4>Webcam</h4>
+          <p>Take photo from webcam as background of meme image.</p>
+
+          <h4>Free &amp; Open Source</h4>
+          <p>Use it for any purpose. Get the source code freely to study, extend, contribute.</p>
+        </div>
+
+        <div class="col-lg-6">
+          <h4>Cross-Platform</h4>
+          <p>Provide similar user experience on multiple platforms, Desktop and Web.</p>
+
+          <h4>Formatting</h4>
+          <p>Edit meme image with some formatting options.</p>
+
+          <h4>Git Integration</h4>
+          <p>Run me101me in Git post-commit hook script. Capture your face when writing a Git commit.</p>
+        </div>
+      </div>
+
+      <footer class="footer">
+      </footer>
+
+    </div> <!-- /container -->
+
+    <script>
+      var appVersion = '0.1.0';
+      try {
+        var agent = window.navigator.userAgent;
+        var isWindows = agent.match(/Windows/);
+        var isLinux = agent.match(/Linux/) && !agent.match(/Android/);
+        var bitness = agent.match(/(WOW|Win)64/) ? '-x64' : '-ia32';
+        var platform = isWindows ? "win" : isLinux ? "linux" : "";
+        if (platform) {
+          var ext = isWindows ? ".zip" : ".tar.gz";
+          var fn = "me101me-" + appVersion + "-" + platform + bitness + ext;
+          var url = "https://github.com/me101me/me101me/releases/download/" + appVersion + "/" + fn;
+          document.querySelector('.btn-desktop-version').href = url;
+        }
+      } catch(e) {}
+    </script>
+  </body>
+</html>
